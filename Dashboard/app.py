@@ -42,11 +42,11 @@ st.markdown("""
 # --- Load Dataset & Artifacts ---
 @st.cache_resource
 def load_project_artifacts():
-    df = pd.read_csv('datasets/syndelay_v1.csv')
-    preprocessor = joblib.load('models/preprocessor.joblib')
-    xgb_model = joblib.load('models/xgboost_delay_model.joblib')
-    rf_model = joblib.load('models/random_forest_delay_model.joblib')
-    lgb_model = joblib.load('models/lightgbm_delay_model.joblib')
+    df = pd.read_csv('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/data/syndelay_v1.csv')
+    preprocessor = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models/preprocessor.joblib')
+    xgb_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models/xgboost_delay_model.joblib')
+    rf_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models/random_forest_delay_model.joblib')
+    lgb_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models/lightgbm_delay_model.joblib')
     return df, preprocessor, xgb_model, rf_model, lgb_model
 
 try:
