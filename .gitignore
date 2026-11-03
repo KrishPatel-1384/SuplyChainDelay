@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.env
+*.log
+.DS_Store
+
+# Dataset is hosted separately
+data/*.csv
+
+# Local temporary files
+.streamlit/secrets.toml
+
+# IDE files
+.vscode/
+
+# Jupyter checkpoints
+**/.ipynb_checkpoints/
+
+# Streamlit local secrets
+.streamlit/secrets.toml
