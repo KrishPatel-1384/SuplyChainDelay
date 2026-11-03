@@ -7,6 +7,7 @@ from sklearn.metrics import accuracy_score
 import joblib
 import os
 from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download
 # --- Page Configuration ---
 st.set_page_config(
     page_title="SupplyChainWatch | Delay Prediction Engine",
@@ -40,12 +41,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Load Dataset & Artifacts ---
-@st.cache_resource
-def load_project_artifacts():
 
-
-# Replace with your actual Hugging Face username
 REPO_ID = "KrishPatel13/supply-chain-delay-data"
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+
 
 @st.cache_data
 def load_dataset():
@@ -54,27 +55,40 @@ def load_dataset():
         filename="syndelay_v1.csv",
         repo_type="dataset"
     )
-
     return pd.read_csv(csv_path)
 
-try:
-    df = load_dataset()
-    st.success("Dataset loaded successfully!")
 
-except Exception as e:
-    st.error(f"Error loading dataset: {e}")
-    st.stop()
-    preprocessor = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models//preprocessor.joblib')
-    xgb_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models//xgboost_delay_model.joblib')
-    rf_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models//random_forest_delay_model.joblib')
-    lgb_model = joblib.load('/home/patel-krish/anaconda3/BrainyBeam/SuplyChainDelay/models//lightgbm_delay_model.joblib')
+@st.cache_resource
+def load_project_artifacts():
+    df = load_dataset()
+
+    preprocessor = joblib.load(
+        os.path.join(MODEL_DIR, "preprocessor.joblib")
+    )
+
+    xgb_model = joblib.load(
+        os.path.join(MODEL_DIR, "xgboost_delay_model.joblib")
+    )
+
+    rf_model = joblib.load(
+        os.path.join(MODEL_DIR, "random_forest_delay_model.joblib")
+    )
+
+    lgb_model = joblib.load(
+        os.path.join(MODEL_DIR, "lightgbm_delay_model.joblib")
+    )
+
     return df, preprocessor, xgb_model, rf_model, lgb_model
+
 
 try:
     df, preprocessor, xgb_model, rf_model, lgb_model = load_project_artifacts()
+    st.success("Dataset and model artifacts loaded successfully!")
+
 except Exception as e:
-    st.error(f" Error loading model artifacts. Make sure your notebooks are executed and models are saved in 'models/'. Details: {e}")
+    st.error(f"Error loading dataset or model artifacts: {e}")
     st.stop()
+
 
 # --- SIDEBAR NAVIGATION (Matching Reference Layout) ---
 st.sidebar.markdown("###  SupplyChainWatch")
