@@ -42,7 +42,7 @@ st.markdown("""
 
 # --- Load Dataset & Artifacts ---
 
-REPO_ID = "KrishPatel13/supply-chain-delay-data"
+REPO_ID = "KrishPatel13/syndelay_v1.csv"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
