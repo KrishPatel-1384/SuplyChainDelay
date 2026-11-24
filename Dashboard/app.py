@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom Theme & Styling (Matching Dark Green Sidebar Reference) ---
+# --- Custom Theme & Styling  ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] {
