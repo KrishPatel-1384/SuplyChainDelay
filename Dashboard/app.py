@@ -3,7 +3,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
 import joblib
 import os
 from huggingface_hub import hf_hub_download
@@ -16,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom Theme & Styling  ---
+# --- Custom Theme & Styling (Matching Dark Green Sidebar Reference) ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] {
@@ -214,19 +220,46 @@ elif navigation == "Model Details":
     y_test = test_data['y_test']
     X_test_proc = preprocessor.transform(X_test)
 
-    acc_xgb = accuracy_score(y_test, xgb_model.predict(X_test_proc))
-    acc_rf = accuracy_score(y_test, rf_model.predict(X_test_proc))
-    acc_lgb = accuracy_score(y_test, lgb_model.predict(X_test_proc))
+    models_dict = {
+        'XGBoost': xgb_model,
+        'Random Forest': rf_model,
+        'LightGBM': lgb_model
+    }
+
+    metrics_list = []
+    acc_map = {}
+
+    for name, model in models_dict.items():
+        y_pred = model.predict(X_test_proc)
+        y_prob = model.predict_proba(X_test_proc)
+
+        acc = accuracy_score(y_test, y_pred)
+        acc_map[name] = acc
+
+        metrics_list.append({
+            'Model': name,
+            'Accuracy': round(acc, 4),
+            'Precision (Weighted)': round(precision_score(y_test, y_pred, average='weighted'), 4),
+            'Recall (Weighted)': round(recall_score(y_test, y_pred, average='weighted'), 4),
+            'F1-Score (Weighted)': round(f1_score(y_test, y_pred, average='weighted'), 4),
+            'F1-Score (Macro)': round(f1_score(y_test, y_pred, average='macro'), 4),
+            'ROC-AUC (OVR)': round(roc_auc_score(y_test, y_prob, multi_class='ovr', average='weighted'), 4)
+        })
 
     col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("XGBoost Accuracy", f"{acc_xgb*100:.2f}%")
-    col_m2.metric("Random Forest Accuracy", f"{acc_rf*100:.2f}%")
-    col_m3.metric("LightGBM Accuracy", f"{acc_lgb*100:.2f}%")
+    col_m1.metric("XGBoost Accuracy", f"{acc_map['XGBoost']*100:.2f}%")
+    col_m2.metric("Random Forest Accuracy", f"{acc_map['Random Forest']*100:.2f}%")
+    col_m3.metric("LightGBM Accuracy", f"{acc_map['LightGBM']*100:.2f}%")
+
+    st.markdown("---")
+    st.subheader("Detailed Evaluation Metrics (Unseen Test Set)")
+    metrics_df = pd.DataFrame(metrics_list)
+    st.dataframe(metrics_df, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.subheader("Model Accuracy Comparison Chart")
     fig, ax = plt.subplots(figsize=(7, 4))
-    perf = {'XGBoost': acc_xgb, 'Random Forest': acc_rf, 'LightGBM': acc_lgb}
+    perf = {'XGBoost': acc_map['XGBoost'], 'Random Forest': acc_map['Random Forest'], 'LightGBM': acc_map['LightGBM']}
     bars = ax.bar(perf.keys(), perf.values(), color=['#0c231e', '#2ca02c', '#ff7f0e'])
     ax.set_ylim(0, 1.0)
     ax.set_ylabel("Accuracy Score")
