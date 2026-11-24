@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 import joblib
 import os
 from huggingface_hub import hf_hub_download
-from huggingface_hub import hf_hub_download
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="SupplyChainWatch | Delay Prediction Engine",
@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom Theme & Styling (Matching Dark Green Sidebar Reference) ---
+# --- Custom Theme & Styling  ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] {
@@ -32,7 +32,7 @@ st.markdown("""
         color: #ffffff;
     }
     .card-container {
-        background-color: #ffffff;
+        background-color: #d60000;
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -46,6 +46,15 @@ REPO_ID = "KrishPatel13/syndelay_v1.csv"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+
+def add_engineered_features(data: pd.DataFrame) -> pd.DataFrame:
+    d = data.copy()
+    d['profit_margin'] = d['profit_per_order'] / (d['sales'] + 1e-5)
+    d['discount_amount'] = d['sales'] * d['order_item_discount_rate']
+    d['price_to_sales_ratio'] = d['product_price'] / (d['sales_per_customer'] + 1e-5)
+    d['lat_lon_interaction'] = d['latitude'] * d['longitude']
+    return d
 
 
 @st.cache_data
@@ -66,6 +75,10 @@ def load_project_artifacts():
         os.path.join(MODEL_DIR, "preprocessor.joblib")
     )
 
+    test_data = joblib.load(
+        os.path.join(MODEL_DIR, "test_split.joblib")
+    )
+
     xgb_model = joblib.load(
         os.path.join(MODEL_DIR, "xgboost_delay_model.joblib")
     )
@@ -78,11 +91,11 @@ def load_project_artifacts():
         os.path.join(MODEL_DIR, "lightgbm_delay_model.joblib")
     )
 
-    return df, preprocessor, xgb_model, rf_model, lgb_model
+    return df, preprocessor, test_data, xgb_model, rf_model, lgb_model
 
 
 try:
-    df, preprocessor, xgb_model, rf_model, lgb_model = load_project_artifacts()
+    df, preprocessor, test_data, xgb_model, rf_model, lgb_model = load_project_artifacts()
     st.success("Dataset and model artifacts loaded successfully!")
 
 except Exception as e:
@@ -196,15 +209,14 @@ elif navigation == "Model Details":
     st.markdown("## ⚙️ Model Details & Benchmarks")
     st.markdown("Performance comparison across trained classification algorithms.")
 
-    X = df[['sales', 'profit_per_order', 'order_item_quantity', 'order_item_discount_rate', 
-            'product_price', 'sales_per_customer', 'latitude', 'longitude', 
-            'shipping_mode', 'market', 'customer_segment', 'department_name']]
-    y = df['label']
-    X_proc = preprocessor.transform(X)
+    # Evaluate strictly on unseen test split (zero data leakage)
+    X_test = test_data['X_test']
+    y_test = test_data['y_test']
+    X_test_proc = preprocessor.transform(X_test)
 
-    acc_xgb = accuracy_score(y, xgb_model.predict(X_proc))
-    acc_rf = accuracy_score(y, rf_model.predict(X_proc))
-    acc_lgb = accuracy_score(y, lgb_model.predict(X_proc))
+    acc_xgb = accuracy_score(y_test, xgb_model.predict(X_test_proc))
+    acc_rf = accuracy_score(y_test, rf_model.predict(X_test_proc))
+    acc_lgb = accuracy_score(y_test, lgb_model.predict(X_test_proc))
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("XGBoost Accuracy", f"{acc_xgb*100:.2f}%")
@@ -275,7 +287,8 @@ elif navigation == "Single Shipment Prediction":
     if st.button("Evaluate Shipment Risk", type="primary", use_container_width=True):
         active_model = xgb_model if model_choice == "XGBoost" else (rf_model if model_choice == "Random Forest" else lgb_model)
         
-        proc_input = preprocessor.transform(input_df)
+        input_df_feat = add_engineered_features(input_df)
+        proc_input = preprocessor.transform(input_df_feat)
         prediction = active_model.predict(proc_input)[0]
         probs = active_model.predict_proba(proc_input)[0]
 
